@@ -6,7 +6,7 @@ go:
   - master
 
 before_install:
-  - go get -v -u github.com/lisitsky/goveralls
+  - go get -v -u github.com/mattn/goveralls
 
 after_success:
   - $HOME/gopath/bin/goveralls -debug -service=travis-ci
