@@ -4,3 +4,9 @@ go:
   - 1.8
   - 1.9
   - master
+
+before_install:
+  - go get -v -u github.com/lisitsky/goveralls
+
+after_success:
+  - $HOME/gopath/bin/goveralls -debug -service=travis-ci
