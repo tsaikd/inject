@@ -5,7 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/tsaikd/inject"
+	"github.com/lisitsky/inject"
+	//"../inject"
 )
 
 type SpecialString interface {
@@ -15,6 +16,7 @@ type TestStruct struct {
 	Dep1 string        `inject:"t" json:"-"`
 	Dep2 SpecialString `inject`
 	Dep3 string
+	Dep4 string        `inject:"" json:"-"`
 }
 
 type Greeter struct {
@@ -84,6 +86,54 @@ func Test_InjectorInvokeReturnValues(t *testing.T) {
 	expect(t, err, nil)
 }
 
+func Test_InjectorInvokeInvalidValues(t *testing.T) {
+	injector := inject.New()
+	expect(t, injector==nil, false)
+
+	dep := "some dependency"
+	//injector.Map(dep)  -- dependency not provided
+	result, err := injector.Invoke(func(d1 string) string {
+		expect(t, d1, dep)
+		return "Hi"
+	})
+	expect(t, len(result)==0, true)
+	expect(t, err==nil, false)
+}
+
+func Test_Injector_MapToInvalidTypeShouldPanic(t *testing.T) {
+	injector := inject.New()
+	expect(t, injector==nil, false)
+
+	dep := "some dep"
+	injector.Map(dep)
+	dep2 := "another dep"
+	// Expecting panic
+	defer func() {
+		rec := recover()
+		refute(t, rec, nil)
+	}()
+	injector.MapTo(dep2, (*int)(nil))
+
+	result, err := injector.Invoke(func(d1 string, d2 SpecialString) string {
+		expect(t, d1, dep)
+		expect(t, d2, dep2)
+		return "Hello world"
+	})
+
+	expect(t, result[0].String(), "Hello world")
+	expect(t, err, nil)
+}
+
+func Test_InjectorInvokeNotAFunction(t *testing.T)  {
+	injector := inject.New()
+	defer func() {
+		rec := recover()
+		fmt.Println("Rec:", rec)
+		refute(t, rec==nil, true)
+	}()
+	_, _ = injector.Invoke(42)
+}
+
 func Test_InjectorApply(t *testing.T) {
 	injector := inject.New()
 
@@ -96,6 +146,17 @@ func Test_InjectorApply(t *testing.T) {
 	expect(t, s.Dep1, "a dep")
 	expect(t, s.Dep2, "another dep")
 	expect(t, s.Dep3, "")
+	expect(t, s.Dep4, "a dep")
+}
+
+func Test_InjectorApplyAbsentValues(t *testing.T)  {
+	injector := inject.New()
+	injector.Map(42)
+	s := TestStruct{}
+	err := injector.Apply(&s)
+	expect(t, err!=nil, true)
+	//expect(t, s.Dep1, "")
+
 }
 
 func Test_InterfaceOf(t *testing.T) {
@@ -140,6 +201,14 @@ func Test_InjectorGet(t *testing.T) {
 	expect(t, injector.Get(reflect.TypeOf("string")).IsValid(), true)
 	expect(t, injector.Get(reflect.TypeOf(11)).IsValid(), false)
 }
+
+//func Test_InjectorGetAbsentValue(t *testing.T)  {
+//	injector := inject.New()
+//	expect(t, injector==nil, false)
+//	v := injector.Get(reflect.TypeOf("string"))
+//	fmt.Println(v)
+//	expect(t, v.IsValid(), false)
+//}
 
 func Test_InjectorSetParent(t *testing.T) {
 	injector := inject.New()
