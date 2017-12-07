@@ -128,7 +128,6 @@ func Test_InjectorInvokeNotAFunction(t *testing.T)  {
 	injector := inject.New()
 	defer func() {
 		rec := recover()
-		fmt.Println("Rec:", rec)
 		refute(t, rec==nil, true)
 	}()
 	_, _ = injector.Invoke(42)
