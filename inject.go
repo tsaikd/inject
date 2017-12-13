@@ -12,6 +12,7 @@ type Injector interface {
 	Applicator
 	Invoker
 	TypeMapper
+	Constructor
 	// SetParent sets the parent of the injector. If the injector cannot find a
 	// dependency in its Type map it will check its parent before returning an
 	// error.
@@ -52,6 +53,13 @@ type TypeMapper interface {
 	// Returns the Value that is mapped to the current type. Returns a zeroed Value if
 	// the Type has not been mapped.
 	Get(reflect.Type) reflect.Value
+}
+
+// Constructor represents and interface for constructing new values based on
+// dependency provided method for this type
+type Constructor interface {
+	// Constructs the value passed as a pointer to it asn
+	Construct(interface{}) error
 }
 
 type injector struct {
@@ -226,4 +234,21 @@ func (i *injector) Get(t reflect.Type) reflect.Value {
 
 func (i *injector) SetParent(parent Injector) {
 	i.parent = parent
+}
+
+// Construct takes an object (structure or interface) given by a reference, takes its type and
+// invokes appropriate constructor
+func (i *injector) Construct(cr interface{}) error {
+	val := reflect.ValueOf(cr)
+	if val.Kind() != reflect.Ptr {
+		return fmt.Errorf("pointer to structure or interface should be passed")
+	}
+	typ := val.Elem().Type()
+	res := i.Get(typ)
+	if !res.IsValid() {
+		return fmt.Errorf("cannot Get valid value for type %v", typ)
+	}
+	val.Elem().Set(res)
+
+	return nil
 }

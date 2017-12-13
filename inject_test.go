@@ -266,3 +266,52 @@ func Test_InjectorProvideInterface(t *testing.T) {
 	})
 	expect(t, err, nil)
 }
+
+func Test_InjectorConstruct(t *testing.T)  {
+	injector := inject.New()
+	injector.Map("a dep").MapTo("another dep", (*SpecialString)(nil))
+
+	type Constructable struct {
+		S string
+		SS SpecialString
+	}
+
+	FConstr := func (s string, ss SpecialString) Constructable{
+		return Constructable{S:s, SS:ss}
+	}
+	injector.Provide(FConstr)
+
+	type IConstructable interface {}
+	FIConstr := func (s string, ss SpecialString) IConstructable{
+		return IConstructable(&Constructable{S:s, SS:ss})
+	}
+
+	injector.Provide(FIConstr)
+
+	var ic IConstructable
+	var err error
+	// good interface
+	err = injector.Construct(&ic)
+	expect(t, err, nil)
+	icc := ic.(*Constructable)
+	expect(t, icc.S == "a dep", true)
+	expect(t, icc.SS == "another dep", true)
+
+	// good structure
+	var c Constructable
+	err = injector.Construct(&c)
+	expect(t, err, nil)
+	expect(t, c.S == "a dep", true)
+	expect(t, c.SS == "another dep", true)
+
+	// bad - no constructor for good structure
+	var c2 *Constructable
+	err = injector.Construct(&c2)
+	refute(t, err, nil)
+	refute(t, c2 ,nil)
+
+	// bad not structure not ptr
+	var bad int
+	err = injector.Construct(bad)
+	refute(t, err, nil)
+}
