@@ -16,7 +16,7 @@ type TestStruct struct {
 	Dep1 string        `inject:"t" json:"-"`
 	Dep2 SpecialString `inject`
 	Dep3 string
-	Dep4 string        `inject:"" json:"-"`
+	Dep4 string `inject:"" json:"-"`
 }
 
 type Greeter struct {
@@ -88,7 +88,7 @@ func Test_InjectorInvokeReturnValues(t *testing.T) {
 
 func Test_InjectorInvokeInvalidValues(t *testing.T) {
 	injector := inject.New()
-	expect(t, injector==nil, false)
+	expect(t, injector == nil, false)
 
 	dep := "some dependency"
 	//injector.Map(dep)  -- dependency not provided
@@ -96,13 +96,13 @@ func Test_InjectorInvokeInvalidValues(t *testing.T) {
 		expect(t, d1, dep)
 		return "Hi"
 	})
-	expect(t, len(result)==0, true)
-	expect(t, err==nil, false)
+	expect(t, len(result) == 0, true)
+	expect(t, err == nil, false)
 }
 
 func Test_Injector_MapToInvalidTypeShouldPanic(t *testing.T) {
 	injector := inject.New()
-	expect(t, injector==nil, false)
+	expect(t, injector == nil, false)
 
 	dep := "some dep"
 	injector.Map(dep)
@@ -124,11 +124,11 @@ func Test_Injector_MapToInvalidTypeShouldPanic(t *testing.T) {
 	expect(t, err, nil)
 }
 
-func Test_InjectorInvokeNotAFunction(t *testing.T)  {
+func Test_InjectorInvokeNotAFunction(t *testing.T) {
 	injector := inject.New()
 	defer func() {
 		rec := recover()
-		refute(t, rec==nil, true)
+		refute(t, rec == nil, true)
 	}()
 	_, _ = injector.Invoke(42)
 }
@@ -148,12 +148,12 @@ func Test_InjectorApply(t *testing.T) {
 	expect(t, s.Dep4, "a dep")
 }
 
-func Test_InjectorApplyAbsentValues(t *testing.T)  {
+func Test_InjectorApplyAbsentValues(t *testing.T) {
 	injector := inject.New()
 	injector.Map(42)
 	s := TestStruct{}
 	err := injector.Apply(&s)
-	expect(t, err!=nil, true)
+	expect(t, err != nil, true)
 	//expect(t, s.Dep1, "")
 
 }
@@ -267,23 +267,23 @@ func Test_InjectorProvideInterface(t *testing.T) {
 	expect(t, err, nil)
 }
 
-func Test_InjectorConstruct(t *testing.T)  {
+func Test_InjectorConstruct(t *testing.T) {
 	injector := inject.New()
 	injector.Map("a dep").MapTo("another dep", (*SpecialString)(nil))
 
 	type Constructable struct {
-		S string
+		S  string
 		SS SpecialString
 	}
 
-	FConstr := func (s string, ss SpecialString) Constructable{
-		return Constructable{S:s, SS:ss}
+	FConstr := func(s string, ss SpecialString) Constructable {
+		return Constructable{S: s, SS: ss}
 	}
 	injector.Provide(FConstr)
 
-	type IConstructable interface {}
-	FIConstr := func (s string, ss SpecialString) IConstructable{
-		return IConstructable(&Constructable{S:s, SS:ss})
+	type IConstructable interface{}
+	FIConstr := func(s string, ss SpecialString) IConstructable {
+		return IConstructable(&Constructable{S: s, SS: ss})
 	}
 
 	injector.Provide(FIConstr)
@@ -308,10 +308,102 @@ func Test_InjectorConstruct(t *testing.T)  {
 	var c2 *Constructable
 	err = injector.Construct(&c2)
 	refute(t, err, nil)
-	refute(t, c2 ,nil)
+	refute(t, c2, nil)
 
 	// bad not structure not ptr
 	var bad int
 	err = injector.Construct(bad)
 	refute(t, err, nil)
+}
+
+func TestConstructLaterStruct(t *testing.T) {
+	injector := inject.New()
+	injector.Map("a dep").MapTo("another dep", (*SpecialString)(nil))
+
+	type Constructable struct {
+		S  string
+		SS SpecialString
+	}
+	FConstr := func(s string, ss SpecialString) Constructable {
+		return Constructable{S: s, SS: ss}
+	}
+	injector.Provide(FConstr)
+
+	var constructable Constructable
+	var err error
+	err = injector.ConstructLater(&constructable)
+	expect(t, err, nil)
+	// object is not ready at the moment
+	expect(t, constructable.S == "", true)
+	err = injector.FinishConstruct()
+	// no error on finalizing
+	expect(t, err, nil)
+	expect(t, constructable.S, "a dep")
+	expect(t, constructable.SS, "another dep")
+}
+
+func TestConstructLaterStructWithAbsentDependency(t *testing.T) {
+	injector := inject.New()
+	injector.Map("a dep").MapTo("another dep", (*SpecialString)(nil))
+
+	type Constructable struct {
+		S  string
+		SS SpecialString
+	}
+	//FConstr := func(s string, ss SpecialString) Constructable {
+	//	return Constructable{S: s, SS: ss}
+	//}
+	//injector.Provide(FConstr)
+
+	var constructable Constructable
+	var err error
+	err = injector.ConstructLater(&constructable)
+	expect(t, err, nil)
+
+	// object is not ready at the moment
+	expect(t, constructable.S == "", true)
+	err = injector.FinishConstruct()
+
+	// error on finalizing, fields should not get their values
+	refute(t, err, nil)
+	expect(t, constructable.S == "a dep", false)
+	expect(t, constructable.SS == "another dep", false)
+}
+
+func TestConstructLaterInterface(t *testing.T) {
+	injector := inject.New()
+	injector.Map("a dep").MapTo("another dep", (*SpecialString)(nil))
+
+	type Constructable struct {
+		S  string
+		SS SpecialString
+	}
+
+	type IConstructable interface{}
+	FIConstr := func(s string, ss SpecialString) IConstructable {
+		return IConstructable(&Constructable{S: s, SS: ss})
+	}
+
+	injector.Provide(FIConstr)
+
+	var iconstructable IConstructable
+	var err error
+	err = injector.ConstructLater(&iconstructable)
+	expect(t, err, nil)
+
+	// object is not ready at the moment
+	icc, ok := iconstructable.(*Constructable)
+	expect(t, ok, false)
+	expect(t, icc == nil, true)
+	err = injector.FinishConstruct()
+
+	// no error on finalizing
+	expect(t, err, nil)
+
+	// object is ok with dependencies
+	icc, ok = iconstructable.(*Constructable)
+	expect(t, ok, true)
+	refute(t, icc == nil, true)
+	expect(t, icc.S, "a dep")
+	expect(t, icc.SS, "another dep")
 }

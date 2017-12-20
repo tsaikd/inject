@@ -60,12 +60,15 @@ type TypeMapper interface {
 type Constructor interface {
 	// Constructs the value passed as a pointer to it asn
 	Construct(interface{}) error
+	ConstructLater(interface{}) error
+	FinishConstruct() error
 }
 
 type injector struct {
-	values    map[reflect.Type]reflect.Value
-	providers map[reflect.Type]reflect.Value
-	parent    Injector
+	values         map[reflect.Type]reflect.Value
+	providers      map[reflect.Type]reflect.Value
+	parent         Injector
+	constructQueue []interface{}
 }
 
 // InterfaceOf dereferences a pointer to an Interface type.
@@ -134,7 +137,7 @@ func (inj *injector) Apply(val interface{}) error {
 		f := v.Field(i)
 		structField := t.Field(i)
 		_, tagHasInject := structField.Tag.Lookup("inject")
-		if f.CanSet() && (structField.Tag == "inject" || tagHasInject ) {
+		if f.CanSet() && (structField.Tag == "inject" || tagHasInject) {
 			ft := f.Type()
 			v := inj.Get(ft)
 			if !v.IsValid() {
@@ -250,5 +253,19 @@ func (i *injector) Construct(cr interface{}) error {
 	}
 	val.Elem().Set(res)
 
+	return nil
+}
+
+func (i *injector) ConstructLater(creatable interface{}) error {
+	i.constructQueue = append(i.constructQueue, creatable)
+	return nil
+}
+
+func (i *injector) FinishConstruct() error {
+	for _, creatable := range i.constructQueue {
+		if err := i.Construct(creatable); err != nil {
+			return fmt.Errorf("finish construct failed: %v", err)
+		}
+	}
 	return nil
 }

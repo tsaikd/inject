@@ -1,16 +1,16 @@
 package inject
 
 import (
-	"sync"
 	"fmt"
+	"sync"
 )
 
 var (
-	defaultInjector  Injector
-	mut sync.Mutex
+	defaultInjector Injector
+	mut             sync.Mutex
 )
 
-func init()  {
+func init() {
 	mut.Lock()
 	defer mut.Unlock()
 	defaultInjector = New()
@@ -18,7 +18,7 @@ func init()  {
 	Print()
 }
 
-func Provide(provider interface{}) TypeMapper  {
+func Provide(provider interface{}) TypeMapper {
 	//_, file, no, ok := runtime.Caller(1)
 	mut.Lock()
 	defer mut.Unlock()
@@ -28,7 +28,7 @@ func Provide(provider interface{}) TypeMapper  {
 // Construct takes an object (structure or interface) given by a reference, takes its type and
 // invokes appropriate constructor
 // Uses default injector, see also (*Inject).Construct
-func Construct(cr interface{}) error  {
+func Construct(cr interface{}) error {
 	mut.Lock()
 	defer mut.Unlock()
 	return defaultInjector.Construct(cr)
@@ -37,20 +37,38 @@ func Construct(cr interface{}) error  {
 // Maps the concrete value of val to its dynamic type using reflect.TypeOf,
 // It returns the TypeMapper registered in.
 // Uses default injector, see also (*Inject).Map
-func Map(val interface{}) TypeMapper  {
+func Map(val interface{}) TypeMapper {
 	mut.Lock()
 	defer mut.Unlock()
 	return defaultInjector.Map(val)
 }
 
-func MapTo(val interface{}, ifacePtr interface{}) TypeMapper  {
+func MapTo(val interface{}, ifacePtr interface{}) TypeMapper {
 	mut.Lock()
 	defer mut.Unlock()
 	return defaultInjector.MapTo(val, ifacePtr)
 }
 
+var (
+// constructQueue allows to make deferred construct - dependencies can be added any time, and constructed only when
+// FinishConstruct is called
+//constructQueue = make([]interface{}, 0)
+//constructMux   sync.Mutex
+)
+
+func ConstructLater(creatable interface{}) error {
+	mut.Lock()
+	defer mut.Unlock()
+	defaultInjector.ConstructLater(creatable)
+	return nil
+}
+
+func FinishConstruct() error {
+	return defaultInjector.FinishConstruct()
+}
+
 //====
-func Print()  {
+func Print() {
 	i := defaultInjector.(*injector)
 	values := []string{}
 	for key, val := range i.values {
@@ -62,5 +80,3 @@ func Print()  {
 	}
 	fmt.Println("Print Injector values:", values, "providers:", providers)
 }
-
-
