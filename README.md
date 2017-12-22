@@ -1,9 +1,80 @@
-# inject
---
-    import "github.com/codegangsta/inject"
+# inject - Dependency Injection and Lazy Construction in Go
+    import "github.com/lisitsky/inject"
 
-Package inject provides utilities for mapping and injecting dependencies in
-various ways.
+Package `inject` provides utilities for total application components decoupling and
+lazy object initialization with automatic and manual dependencies injection resolving.
+
+## Simple example:
+Suppose we have a package providing struct matching `fmt.Stringer` interface .
+All we have to do is to add a constructor for it (here `NewStringer` function) 
+then announce it in `init` function with `inject.Provide()` method. 
+
+This declares: "Function `NewStringer` provides a way to construct `fmt.Stringer`. 
+And anybody who can use it without further declarations." 
+
+
+```go
+ package dependency
+    
+ import (
+    "fmt"
+    
+    "github.com/lisitsky/inject"
+ )
+    
+ func init() {
+    inject.Provide(NewStringer)
+ }
+    
+type stringer struct{}
+    
+func (s stringer) String() string {
+    return "Hello, World"
+}
+    
+func NewStringer() fmt.Stringer {
+    return stringer{}
+}
+```
+
+On a side accepting dependency (`main.go`):
+
+```go
+ package main
+ 
+
+ import (
+    "fmt"
+ 	
+    "github.com/lisitsky/inject"
+    
+    _ "github.com/lisitsky/inject/examples/simple/dependency"
+ )
+ 
+ var ( 
+    str fmt.Stringer
+ )
+ 
+ func main() {
+    inject.Construct(&str)
+    fmt.Println("My Stringer is:", str)
+ }
+```
+
+Output:
+
+    My Stringer is: Hello, World
+    
+## Key benefints
+
+ * Main application has to "know" only **what** does it want to obtain, but not **how** 
+ and **from where** it should be constructed.
+ * No direct constructor invocations at all. Any package providing dependency 
+ can be substituted at any moment to another one providing the same interface .
+ * Easy **reassignment** of constructors **at late stages**. This helps to provide 
+ one or two mocks and makes tests very easy without changes in another application pars.
+       
+
 
 Language Translations:
 * [简体中文](translations/README_zh_cn.md)
