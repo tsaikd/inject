@@ -14,17 +14,17 @@ And anybody who can use it without further declarations."
 
 
 ```go
- package dependency
+package dependency
     
- import (
-    "fmt"
+import (
+   "fmt"
+   
+   "github.com/lisitsky/inject"
+)
     
-    "github.com/lisitsky/inject"
- )
-    
- func init() {
-    inject.Provide(NewStringer)
- }
+func init() {
+   inject.Provide(NewStringer)
+}
     
 type stringer struct{}
     
@@ -40,25 +40,25 @@ func NewStringer() fmt.Stringer {
 On a side accepting dependency (`main.go`):
 
 ```go
- package main
+package main
  
 
- import (
-    "fmt"
- 	
-    "github.com/lisitsky/inject"
-    
-    _ "github.com/lisitsky/inject/examples/simple/dependency"
- )
+import (
+   "fmt"
+	
+   "github.com/lisitsky/inject"
+   
+   _ "github.com/lisitsky/inject/examples/simple/dependency"
+)
  
- var ( 
-    str fmt.Stringer
- )
+var ( 
+   str fmt.Stringer
+)
  
- func main() {
-    inject.Construct(&str)
-    fmt.Println("My Stringer is:", str)
- }
+func main() {
+   inject.Construct(&str)
+   fmt.Println("My Stringer is:", str)
+}
 ```
 
 Output:
