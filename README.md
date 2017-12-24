@@ -1,4 +1,8 @@
 # inject - Dependency Injection and Lazy Construction in Go
+
+[![Build Status](https://travis-ci.org/lisitsky/inject.svg?branch=master)](https://travis-ci.org/lisitsky/inject)
+[![Coverage Status](https://coveralls.io/repos/github/lisitsky/inject/badge.svg?branch=docs)](https://coveralls.io/github/lisitsky/inject?branch=docs)
+
     import "github.com/lisitsky/inject"
 
 Package `inject` provides utilities for total application components decoupling and
