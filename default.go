@@ -1,7 +1,6 @@
 package inject
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -14,12 +13,9 @@ func init() {
 	mut.Lock()
 	defer mut.Unlock()
 	defaultInjector = New()
-	fmt.Print("inject inited")
-	Print()
 }
 
 func Provide(provider interface{}) TypeMapper {
-	//_, file, no, ok := runtime.Caller(1)
 	mut.Lock()
 	defer mut.Unlock()
 	return defaultInjector.Provide(provider)
@@ -49,13 +45,6 @@ func MapTo(val interface{}, ifacePtr interface{}) TypeMapper {
 	return defaultInjector.MapTo(val, ifacePtr)
 }
 
-var (
-// constructQueue allows to make deferred construct - dependencies can be added any time, and constructed only when
-// FinishConstruct is called
-//constructQueue = make([]interface{}, 0)
-//constructMux   sync.Mutex
-)
-
 func ConstructLater(creatable interface{}) error {
 	mut.Lock()
 	defer mut.Unlock()
@@ -65,18 +54,4 @@ func ConstructLater(creatable interface{}) error {
 
 func FinishConstruct() error {
 	return defaultInjector.FinishConstruct()
-}
-
-//====
-func Print() {
-	i := defaultInjector.(*injector)
-	values := []string{}
-	for key, val := range i.values {
-		values = append(values, fmt.Sprintf("%v:%v", key, val))
-	}
-	providers := []string{}
-	for key, val := range i.values {
-		providers = append(providers, fmt.Sprintf("%v:%v|", key, val))
-	}
-	fmt.Println("Print Injector values:", values, "providers:", providers)
 }

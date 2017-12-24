@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/lisitsky/inject"
-	//"../inject"
 )
 
 type SpecialString interface {
@@ -154,8 +153,14 @@ func Test_InjectorApplyAbsentValues(t *testing.T) {
 	s := TestStruct{}
 	err := injector.Apply(&s)
 	expect(t, err != nil, true)
-	//expect(t, s.Dep1, "")
+}
 
+func Test_InjectorApplyNotStruct(t *testing.T) {
+	injector := inject.New()
+	injector.Map(42)
+	i := 42
+	err := injector.Apply(&i)
+	expect(t, err == nil, true)
 }
 
 func Test_InterfaceOf(t *testing.T) {
@@ -201,13 +206,28 @@ func Test_InjectorGet(t *testing.T) {
 	expect(t, injector.Get(reflect.TypeOf(11)).IsValid(), false)
 }
 
-//func Test_InjectorGetAbsentValue(t *testing.T)  {
-//	injector := inject.New()
-//	expect(t, injector==nil, false)
-//	v := injector.Get(reflect.TypeOf("string"))
-//	fmt.Println(v)
-//	expect(t, v.IsValid(), false)
-//}
+func Test_GetWithInvalidInvokeShouldPanic(t *testing.T) {
+	injector := inject.New()
+	expect(t, injector == nil, false)
+
+	provider := func(s string) int {
+		return 42
+	}
+	var i int
+	injector.Provide(provider)
+
+	// dependency with type `string` is not provided - expecting panic
+	defer func() {
+		rec := recover()
+		refute(t, rec, nil)
+		e, ok := rec.(error)
+		refute(t, ok, false)
+		expect(t, e.Error() == "Value not found for type string", true)
+	}()
+
+	result := injector.Get(reflect.TypeOf(i))
+	expect(t, result.IsValid(), false)
+}
 
 func Test_InjectorSetParent(t *testing.T) {
 	injector := inject.New()
