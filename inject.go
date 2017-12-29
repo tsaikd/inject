@@ -12,6 +12,7 @@ type Injector interface {
 	Applicator
 	Invoker
 	TypeMapper
+	Constructor
 	// SetParent sets the parent of the injector. If the injector cannot find a
 	// dependency in its Type map it will check its parent before returning an
 	// error.
@@ -54,10 +55,20 @@ type TypeMapper interface {
 	Get(reflect.Type) reflect.Value
 }
 
+// Constructor represents and interface for constructing new values based on
+// dependency provided method for this type
+type Constructor interface {
+	// Constructs the value passed as a pointer to it asn
+	Construct(interface{}) error
+	ConstructLater(interface{}) error
+	FinishConstruct() error
+}
+
 type injector struct {
-	values    map[reflect.Type]reflect.Value
-	providers map[reflect.Type]reflect.Value
-	parent    Injector
+	values         map[reflect.Type]reflect.Value
+	providers      map[reflect.Type]reflect.Value
+	parent         Injector
+	constructQueue []interface{}
 }
 
 // InterfaceOf dereferences a pointer to an Interface type.
@@ -125,7 +136,8 @@ func (inj *injector) Apply(val interface{}) error {
 	for i := 0; i < v.NumField(); i++ {
 		f := v.Field(i)
 		structField := t.Field(i)
-		if f.CanSet() && (structField.Tag == "inject" || structField.Tag.Get("inject") != "") {
+		_, tagHasInject := structField.Tag.Lookup("inject")
+		if f.CanSet() && (structField.Tag == "inject" || tagHasInject) {
 			ft := f.Type()
 			v := inj.Get(ft)
 			if !v.IsValid() {
@@ -225,4 +237,35 @@ func (i *injector) Get(t reflect.Type) reflect.Value {
 
 func (i *injector) SetParent(parent Injector) {
 	i.parent = parent
+}
+
+// Construct takes an object (structure or interface) given by a reference, takes its type and
+// invokes appropriate constructor
+func (i *injector) Construct(cr interface{}) error {
+	val := reflect.ValueOf(cr)
+	if val.Kind() != reflect.Ptr {
+		return fmt.Errorf("pointer to structure or interface should be passed")
+	}
+	typ := val.Elem().Type()
+	res := i.Get(typ)
+	if !res.IsValid() {
+		return fmt.Errorf("cannot Get valid value for type %v", typ)
+	}
+	val.Elem().Set(res)
+
+	return nil
+}
+
+func (i *injector) ConstructLater(creatable interface{}) error {
+	i.constructQueue = append(i.constructQueue, creatable)
+	return nil
+}
+
+func (i *injector) FinishConstruct() error {
+	for _, creatable := range i.constructQueue {
+		if err := i.Construct(creatable); err != nil {
+			return fmt.Errorf("finish construct failed: %v", err)
+		}
+	}
+	return nil
 }

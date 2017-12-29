@@ -1,2 +1,5 @@
 inject
 inject.test
+
+#IDE
+.idea/
