@@ -5,8 +5,25 @@
 
     import "github.com/lisitsky/inject"
 
-Package `inject` provides utilities for total application components decoupling and
-lazy object initialization with automatic and manual dependencies injection resolving.
+Package `inject` provides utilities for total application 
+components decoupling and lazy object initialization with automatic 
+and manual dependencies injection resolving.
+
+## Key advantages
+
+ * Constructor arguments could be resolved automatically
+ * Component can have standard public constructor for manuall calls 
+ and private/public constructor for automatical injection
+ * Total decoupling as between dependencies and dependency acceptors
+ so as different interfaces implementation 
+ * Main application has to "know" only **what** does it want to obtain, 
+ but not **how** and **from where** it should be constructed.
+ * No direct constructor invocations at all. Any package providing dependency 
+ can be substituted at any moment to another one providing the same interface .
+ * Easy **reassignment** of constructors **at late stages**. This helps to provide 
+ one or two mocks and makes tests very easy without changes in another application pars.
+       
+
 
 ## Simple example:
 Suppose we have a package providing struct matching `fmt.Stringer` interface .
@@ -69,15 +86,6 @@ Output:
 
     My Stringer is: Hello, World
     
-## Key benefints
-
- * Main application has to "know" only **what** does it want to obtain, but not **how** 
- and **from where** it should be constructed.
- * No direct constructor invocations at all. Any package providing dependency 
- can be substituted at any moment to another one providing the same interface .
- * Easy **reassignment** of constructors **at late stages**. This helps to provide 
- one or two mocks and makes tests very easy without changes in another application pars.
-       
 
 
 Language Translations:
